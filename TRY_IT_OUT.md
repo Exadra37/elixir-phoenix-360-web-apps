@@ -2,6 +2,11 @@
 
 Let's see how the Phoenix 360 Web Apps methodology can be used in practice by implementing the [White Paper](/WHITE_PAPER.md#an-usage-example) usage example.
 
+## TOC
+
+* [Hosts setup](#hosts-setup)
+* [Create a project](#create-a-phoenix-360-web-apps-project)
+* [Secrets](#phoenix-360-web-apps-secrets)
 
 ## Hosts Setup
 
@@ -13,7 +18,10 @@ echo "127.0.0.1 links.local" >> /etc/hosts
 echo "127.0.0.1 notes.local" >> /etc/hosts
 ```
 
-## Phoenix 360 Web App Project
+[Home](/README.md) | [TOC](#TOC)
+
+
+## Create a Phoenix 360 Web Apps Project
 
 Create the root Phoenix project:
 
@@ -50,6 +58,9 @@ Fix webpack not watching [symlinks](https://github.com/webpack/watchpack/issues/
 find . -type f -name 'DirectoryWatcher.js' -exec sed -i 's/followSymlinks: false/followSymlinks: true/g' {} +
 ```
 
+[Home](/README.md) | [TOC](#TOC)
+
+
 ## Phoenix 360 Web Apps Secrets
 
 In order for sessions, websockets and tokens to work accross all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/links` and `app.local/notes` will not work, because the secrets used to sign the csrf tokens aren't the same that `links.local` and `notes.local` use.
@@ -67,6 +78,9 @@ export SECRET_KEY_BASE=$(mix phx.gen.secret 64)
 export LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)
 export SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)
 ```
+
+[Home](/README.md) | [TOC](#TOC)
+
 
 ## Phoenix 360 Web Apps Routing Dispatch
 
@@ -138,6 +152,9 @@ config :notes, NotesWeb.Endpoint,
 
 ```
 
+[Home](/README.md) | [TOC](#TOC)
+
+
 ## Live Code Reload
 
 ### Phoenix 360 Web App Config for Development
@@ -189,6 +206,9 @@ config :notes, NotesWeb.Endpoint,
   # will not recompile on a live reload event if we not explicitly enable it:
   reloadable_apps: [:notes]
 ```
+
+[Home](/README.md) | [TOC](#TOC)
+
 
 ## Static Assets
 
@@ -246,6 +266,9 @@ plug Plug.Static,
     only: ~w(css fonts images js favicon.ico robots.txt)
 ```
 
+[Home](/README.md) | [TOC](#TOC)
+
+
 ## Mix Dependencies
 
 Now let's add the the Phoenix 360 apps to `mix.exs`:
@@ -267,6 +290,9 @@ Get the new deps:
 mix deps.get
 ```
 
+[Home](/README.md) | [TOC](#TOC)
+
+
 ## Running
 
 Start the `:phoenix360` server:
@@ -274,3 +300,11 @@ Start the `:phoenix360` server:
 ```
 iex -S mix phx.server
 ```
+
+You can now use the same `iex` shell to check the Supervision tree with:
+
+```
+:observer.start()
+```
+
+[Home](/README.md) | [TOC](#TOC)
