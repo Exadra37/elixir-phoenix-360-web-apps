@@ -8,6 +8,9 @@ Let's see how the Phoenix 360 Web Apps methodology can be used in practice by im
 * [Create a project](#create-a-phoenix-360-web-apps-project)
 * [Secrets](#phoenix-360-web-apps-secrets)
 
+[Home](/README.md)
+
+
 ## Hosts Setup
 
 In order to follow the Phoenix 360 Web Apps example you will need to add 3 entries to `/etc/hosts`:
