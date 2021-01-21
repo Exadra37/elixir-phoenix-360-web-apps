@@ -40,4 +40,6 @@ Independently how the user accesses any of the 360 web apps, the user can always
 
 Also, the data for each of the three 360 web apps is always kept in sync because the server handling the requests for `app.tld/links` is the exact same one that handles the requests for `links.tld`, and the same applies for `app.tld/notes` and `notes.tld`.
 
+Nothing better then putting this example in practice, and for that you want to follow the [Try it Out](/TRY_IT_OUT.md) guide.
+
 [Home](/README.md)
