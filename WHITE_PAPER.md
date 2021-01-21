@@ -22,12 +22,12 @@ The word *Phoenix* comes form the fact that it uses the [Phoenix Framework](http
 
 Lets imagine we have the website `app.tld` where we want to provide the resources *Links* and *Notes*, while at same time we want to provide each of them as a separated website.
 
-So, each resource is a self contained and standalone web app that can be accessed as:
+So, each resource is a self contained and standalone 360 web app that can be accessed as:
 
 * links.tld
 * notes.tld
 
-Now, for having all the resources under the same website, each web app will be accessed as:
+Now, for having all the resources under the same website, each 360 web app will be accessed as:
 
 * app.tld/links
 * app.tld/notes
@@ -36,8 +36,8 @@ From an outside perspective, all this three websites, `app.tld`, `links.tld` and
 
 Due to the nature of the Elixir runtime all this three websites can be bolt together without the need to have separated deployments and complex systems in place to keep them in sync. So, all of the three 360 web apps are deployed from a single project under the website `app.tld`. The web server for `app.tld` will be the only one running and accepting requests for all the three websites on the same http port `80` and https port `443`. Technically we could also start from `app.tld` the web servers for `links.tld` and `notes.tld`, but they would need to run in different ports.
 
-Independently how the user accesses any of the 360 web apps, the user can always use the same account that he may have created through `app.tld`, through `links.tld` or through `notes.local`.
+Independently how the user accesses any of the 360 web apps, the user can always use the same account that he may have created through `app.tld`, through `links.tld` or through `notes.tld`.
 
-Also, the data for each of the three 360 web apps is always kept in sync because the server handling the requests for `app.local/links` is the exact same one that handles the requests for `links.local`, and the same applies for `app.tld/notes` and `notes.tld`.
+Also, the data for each of the three 360 web apps is always kept in sync because the server handling the requests for `app.tld/links` is the exact same one that handles the requests for `links.tld`, and the same applies for `app.tld/notes` and `notes.tld`.
 
 [Home](/README.md)
