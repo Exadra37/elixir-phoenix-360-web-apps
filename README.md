@@ -13,15 +13,19 @@ In a nutshell the Phoenix 360 Web Apps is a methodology whereby several web apps
 
 Paulo Renato is known more often than not as paranoid about security. He strongly believes that all software should be secure by default. He thinks security should be always opt-out instead of opt-in and be treated as a first class citizen in the software development cycle, instead of an after thought when the product is about to be finished or released.
 
-## Personal WebSites
+### Personal WebSites
+
+#### Take a look at:
 
 * [Timeline](https://exadra37.com)
 * [Blog](https://exadra37.com/blog)
 
 ### Code Repositories
 
+#### Lookup my code playground at:
+
 * [Github](https://github.com/Exadra37)
-* [Gitlab](https://gitlab.com/u/Exadra37)
+* [Gitlab](https://gitlab.com/exadra37)
 
 ### Social Networks
 
@@ -41,7 +45,7 @@ Paulo Renato is known more often than not as paranoid about security. He strongl
 
 ### Professional Public Work
 
-#### Find my work at:
+#### See my work at:
 
 * [Approov Blog](https://blog.approov.io/author/paulo-renato)
 * [Approov Github](https://github.com/orgs/approov/people/Exadra37)
