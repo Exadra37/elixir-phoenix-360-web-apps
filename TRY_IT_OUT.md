@@ -20,7 +20,7 @@ You will build a Phoenix 360 web apps project, that will consist of three websit
 * `links.local` - the standalone website that will also be available at `app.local/links`.
 * `notes.local` - the standalone website that will also be available at `app.local/notes`.
 
-The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will delegate(not redirect or forward) any request to `app.local/links` and `app.local/notes` into the same application that runs `links.local` and `notes.local` respectively.
+The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will dispatch(not redirect or forward) any request to `app.local/links` and `app.local/notes` into the same application that runs `links.local` and `notes.local` respectively.
 
 [Home](/README.md) | [TOC](#toc)
 
@@ -117,9 +117,9 @@ notes_host = System.fetch_env!(NOTES_HOST)
 config :phoenix360, Phoenix360Web.Endpoint,
   http: [
     port: phoenix360_http_port,
+    # @link https://ninenines.eu/docs/en/cowboy/2.7/guide/routing/
     dispatch: [
       {
-        # @link https://ninenines.eu/docs/en/cowboy/2.7/guide/routing/
         phoenix360_host,
         [
           # @PHOENIX_360_WEB_APPS - Each included 360 web app needs to have an
