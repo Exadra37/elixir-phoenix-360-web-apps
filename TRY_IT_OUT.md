@@ -104,10 +104,10 @@ export SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)
 
 ## Phoenix 360 Web Apps Routing Dispatch
 
-Then on `phoenix360/config/config.exs` let's add the configuration for the new apps:
+Let's add the configuration for the new apps:
 
 ```elixir
-# file: config/config.exs
+# file: ./phoenix360/config/config.exs
 
 phoenix360_http_port = System.fetch_env!(PHOENIX360_HTTP_PORT)
 phoenix360_host = System.fetch_env!(PHOENIX360_HOST)
@@ -180,7 +180,7 @@ config :notes, NotesWeb.Endpoint,
 ### Phoenix 360 Web App Config for Development
 
 ```elixir
-# file: config/dev.exs
+# file: ./phoenix360/config/dev.exs
 
 config :phoenix360, Phoenix360Web.Endpoint,
   live_reload: [
@@ -206,7 +206,7 @@ config :phoenix360, Phoenix360Web.Endpoint,
 For the `:links` 360 included web app:
 
 ```elixir
-# file: apps/links/config/dev.exs
+# file: ./phoenix360/apps/links/config/dev.exs
 
 # @PHOENIX_360_WEB_APPS
 config :links, NotesWeb.Endpoint,
@@ -218,7 +218,7 @@ config :links, NotesWeb.Endpoint,
 For the `:links` 360 included web app:
 
 ```elixir
-# file: apps/notes/config/dev.exs
+# file: ./phoenix360/apps/notes/config/dev.exs
 
 # @PHOENIX_360_WEB_APPS
 config :notes, NotesWeb.Endpoint,
@@ -237,7 +237,7 @@ config :notes, NotesWeb.Endpoint,
 For the `:links` 360 included web app:
 
 ```elixir
-# file: apps/links/config/config.exs
+# file: ./phoenix360/apps/links/config/config.exs
 
 # @PHOENIX_360_WEB_APPS
 config :links, NotesWeb.Endpoint,
@@ -248,7 +248,7 @@ config :links, NotesWeb.Endpoint,
 For the `:notes` 360 included web app:
 
 ```elixir
-# file: apps/notes/config/config.exs
+# file: ./phoenix360/apps/notes/config/config.exs
 
 # @PHOENIX_360_WEB_APPS
 config :notes, NotesWeb.Endpoint,
@@ -259,7 +259,7 @@ config :notes, NotesWeb.Endpoint,
 Next, we need to enable live reload for each 360 web app static assets:
 
 ```elixir
-# @file: apps/links/lib/links_web/endpoint.ex
+# @file: ./phoenix360/apps/links/lib/links_web/endpoint.ex
 
 # @PHOENIX_360_WEB_APPS - The prefix use for the top level static assets needs to be
 #   the same here.
@@ -274,7 +274,7 @@ plug Plug.Static,
 and for the the `:notes` 360 web app:
 
 ```elixir
-# @file: apps/notes/lib/notes_web/endpoint.ex
+# @file: ./phoenix360/apps/notes/lib/notes_web/endpoint.ex
 
 # @PHOENIX_360_WEB_APPS - The prefix use for the top level static assets needs to be
 #   the same here.
