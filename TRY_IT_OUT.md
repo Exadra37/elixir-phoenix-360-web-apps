@@ -93,7 +93,7 @@ The following secrets must be the same for all the 360 web app:
 
 So, go to each of the configuration files and edit the value for the secret to be retrieved from the environment with:
 
-```
+```elixir
 # file: ./phoenix360/config/config.exs
 # file: ./phoenix360/apps/links/config/config.exs
 # file: ./phoenix360/apps/notes/config/config.exs
@@ -104,7 +104,7 @@ live_view: [signing_salt: System.fetch_env!('LIVE_VIEW_SIGNING_SALT')]
 
 and for the endpoints:
 
-```
+```elixir
 # file: ./phoenix360/lib/app_web/endpoint.ex
 # file: ./phoenix360/apps/links/lib/app_web/endpoint.ex
 # file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
