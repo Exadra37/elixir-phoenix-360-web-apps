@@ -14,11 +14,13 @@ Let's see how the Phoenix 360 Web Apps methodology can be used in practice by im
 
 ## Project Context
 
-We will build a Phoenix 360 web apps project, that will consist of three websites:
+You will build a Phoenix 360 web apps project, that will consist of three websites:
 
 * `app.local` - will be the main web app and the only one that runs a web server.
 * `links.local` - the standalone website that will also be available at `app.local/links`.
 * `notes.local` - the standalone website that will also be available at `app.local/notes`.
+
+The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will delegate(not redirect or forward) any request to `app.local/links` into `links.local`, and will do the same for the `:notes` 360 web app.
 
 [Home](/README.md) | [TOC](#toc)
 
