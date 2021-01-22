@@ -20,6 +20,8 @@ We will build a Phoenix 360 web apps project, that will consist of three website
 * `links.local` - the standalone website that will also be available at `app.local/links`.
 * `notes.local` - the standalone website that will also be available at `app.local/notes`.
 
+[Home](/README.md) | [TOC](#toc)
+
 
 ## Hosts Setup
 
