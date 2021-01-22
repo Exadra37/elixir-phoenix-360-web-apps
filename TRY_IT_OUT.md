@@ -21,7 +21,7 @@ echo "127.0.0.1 links.local" >> /etc/hosts
 echo "127.0.0.1 notes.local" >> /etc/hosts
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Create a Phoenix 360 Web Apps Project
@@ -61,7 +61,7 @@ Fix webpack not watching [symlinks](https://github.com/webpack/watchpack/issues/
 find . -type f -name 'DirectoryWatcher.js' -exec sed -i 's/followSymlinks: false/followSymlinks: true/g' {} +
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Phoenix 360 Web Apps Secrets
@@ -82,7 +82,7 @@ export LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)
 export SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Phoenix 360 Web Apps Routing Dispatch
@@ -155,7 +155,7 @@ config :notes, NotesWeb.Endpoint,
 
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Live Code Reload
@@ -210,7 +210,7 @@ config :notes, NotesWeb.Endpoint,
   reloadable_apps: [:notes]
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Static Assets
@@ -269,7 +269,7 @@ plug Plug.Static,
     only: ~w(css fonts images js favicon.ico robots.txt)
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Mix Dependencies
@@ -293,7 +293,7 @@ Get the new deps:
 mix deps.get
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
 
 
 ## Running
@@ -310,4 +310,4 @@ You can now use the same `iex` shell to check the Supervision tree with:
 :observer.start()
 ```
 
-[Home](/README.md) | [TOC](#TOC)
+[Home](/README.md) | [TOC](#toc)
