@@ -4,11 +4,21 @@ Let's see how the Phoenix 360 Web Apps methodology can be used in practice by im
 
 ## TOC
 
+* [Project context](#project-context)
 * [Hosts setup](#hosts-setup)
 * [Create a project](#create-a-phoenix-360-web-apps-project)
 * [Secrets](#phoenix-360-web-apps-secrets)
 
 [Home](/README.md)
+
+
+## Project Context
+
+We will build a Phoenix 360 web apps project, that will consist of three websites:
+
+* `app.local` - will be the main web app and the only one that runs a web server.
+* `links.local` - the standalone website that will also be available at `app.local/links`.
+* `notes.local` - the standalone website that will also be available at `app.local/notes`.
 
 
 ## Hosts Setup
