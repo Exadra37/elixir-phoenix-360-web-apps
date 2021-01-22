@@ -125,7 +125,7 @@ config :phoenix360, Phoenix360Web.Endpoint,
           # @PHOENIX_360_WEB_APPS - Each included 360 web app needs to have an
           #   endpoint in the top level 360 web app. This is necessary in order
           #   for the top level 360 web app to know how to dispatch the requests.
-          #   For example a request to example.com/links/* will be dispatched to
+          #   For example a request to app.local/links/* will be dispatched to
           #   the `/links/*` endpoint for the LinksWeb.Router.
           #
           # {:path_match, :handler, :initial_state}
@@ -192,7 +192,7 @@ config :phoenix360, Phoenix360Web.Endpoint,
 
       # @PHOENIX_360_WEB_APPS - we need to give the relative path to each of the
       # included 360 web apps, otherwise live code reload will not work at the
-      # top level, eg: example.com/links.
+      # top level, eg: app.local/links.
       ~r"apps/notes/lib/notes_web/(live|views)/.*(ex)$",
       ~r"apps/notes/lib/notes_web/templates/.*(eex)$",
       ~r"apps/links/lib/links_web/(live|views)/.*(ex)$",
@@ -241,7 +241,7 @@ For the `:links` 360 included web app:
 
 # @PHOENIX_360_WEB_APPS
 config :links, NotesWeb.Endpoint,
-  # Adds a prefix to the static assets path, eg: example.com/links/css/app.css.
+  # Adds a prefix to the static assets path, eg: app.local/links/css/app.css.
   static_url: [path: "/links"]
 ```
 
@@ -252,7 +252,7 @@ For the `:notes` 360 included web app:
 
 # @PHOENIX_360_WEB_APPS
 config :notes, NotesWeb.Endpoint,
-  # Adds a prefix to the static assets path, eg: example.com/notes/css/app.css.
+  # Adds a prefix to the static assets path, eg: app.local/notes/css/app.css.
   static_url: [path: "/notes"]
 ```
 
