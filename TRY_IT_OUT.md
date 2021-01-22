@@ -85,21 +85,53 @@ mix phx.new apps/notes --no-ecto --live
 
 In order for sessions, websockets and tokens to work across all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/links` and `app.local/notes` will not work, because the csrf tokens aren't signed with the same secrets used by `links.local` and `notes.local`.
 
-The following secrets must be the same for all the 360 web app:
+The following secrets must be the same for all the 360 web apps:
 
 * `secret_key_base` at `config/config.exs`.
 * `signing_salt` for Live View at `config/config.exs`.
 * `signing_salt` for the session options at `lib/app_web/endpoint.ex`.
 
-So, go to each of the configuration files and edit the value for the secret to be retrieved from the environment with:
+First, you need to set the environment variables with:
+
+```
+echo "PHOENIX360_SECRET_KEY_BASE=$(mix phx.gen.secret 64)" >> .env
+echo "PHOENIX360_LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
+echo "PHOENIX360_SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
+```
+
+> **IMPORTANT:** We will store the environment variables in the `.env` file, because in production you want to keep the same secrets across deployments, otherwise all connected sessions will be dropped, websockets will need to reconnect, and users will need to re-authenticate.
+
+> **SECURITY:** Here we use a `.env` file but for a more secure solution you may want to look to store the secrets in vaults, and one of the most used is the [vaultproject.io](https://www.vaultproject.io/).
+
+Now export them to your environment with:
+
+```
+export $(grep -v '^#' .env | xargs -0)
+```
+
+Confirm they are set with:
+
+```
+env | grep PHOENIX360 -
+```
+
+Output should look similar to this:
+
+```
+PHOENIX360_SECRET_KEY_BASE=BJi83QuLvA/Avxx2FbqW2dhY1H/V/PWjNUmMe2igf1RzvVw9Lo/tfPZcDUzQHfVq
+PHOENIX360_LIVE_VIEW_SIGNING_SALT=RpQae1VGBO9C6R8El33YtzIIvoxvgngk
+PHOENIX360_SESSION_SIGNING_SALT=S3JZE2IgcR5rp9Ou2XUc62SdSUEPTsuM
+```
+
+Now, go to each of the configuration files and edit the value for the secret to be retrieved from the environment with:
 
 ```elixir
 # file: ./phoenix360/config/config.exs
 # file: ./phoenix360/apps/links/config/config.exs
 # file: ./phoenix360/apps/notes/config/config.exs
 
-secret_key_base: System.fetch_env!('SECRET_KEY_BASE'),
-live_view: [signing_salt: System.fetch_env!('LIVE_VIEW_SIGNING_SALT')]
+secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
+live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")]
 ```
 
 and for the endpoints:
@@ -110,19 +142,9 @@ and for the endpoints:
 # file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
 
 @session_options [
-  signing_salt: System.fetch_env!('LIVE_VIEW_SIGNING_SALT')
+  signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT")
 ]
 ```
-
-You can share them through environment variables:
-
-```
-export SECRET_KEY_BASE=$(mix phx.gen.secret 64)
-export LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)
-export SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)
-```
-
-> **IMPORTANT:** For a production deployment you want to keep this secrets the same across deployments, otherwise all user connect will need to re-authenticate.
 
 [Home](/README.md) | [TOC](#toc)
 
