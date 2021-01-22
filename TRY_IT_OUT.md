@@ -20,7 +20,7 @@ You will build a Phoenix 360 web apps project, that will consist of three websit
 * `links.local` - the standalone website that will also be available at `app.local/links`.
 * `notes.local` - the standalone website that will also be available at `app.local/notes`.
 
-The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will delegate(not redirect or forward) any request to `app.local/links` into `links.local`, and will do the same for the `:notes` 360 web app.
+The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will delegate(not redirect or forward) any request to `app.local/links` and `app.local/notes` into the same application that runs `links.local` and `notes.local` respectively.
 
 [Home](/README.md) | [TOC](#toc)
 
