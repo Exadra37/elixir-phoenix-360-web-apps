@@ -62,7 +62,7 @@ Start the server:
 iex -S mix phx.server
 ```
 
-Test it works by visiting http:localhost:4000.
+Test it works by visiting http://localhost:4000.
 
 Next, lets create the app `:links`:
 
