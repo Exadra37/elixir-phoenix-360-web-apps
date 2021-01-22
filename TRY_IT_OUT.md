@@ -30,9 +30,18 @@ The web server for `app.local` will also serve the requests for `links.local` an
 In order to follow the Phoenix 360 Web Apps example you will need to add 3 entries to `/etc/hosts`:
 
 ```
-echo "127.0.0.1 app.local" >> /etc/hosts
-echo "127.0.0.1 links.local" >> /etc/hosts
-echo "127.0.0.1 notes.local" >> /etc/hosts
+sudo sh -c 'echo "127.0.0.1 app.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 links.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 notes.local" >> /etc/hosts'
+```
+
+check that they were added:
+
+```
+$ cat /etc/hosts | tail -3
+127.0.0.1 app.local
+127.0.0.1 links.local
+127.0.0.1 notes.local
 ```
 
 [Home](/README.md) | [TOC](#toc)
