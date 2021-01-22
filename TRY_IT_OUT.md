@@ -78,12 +78,6 @@ Next, time to create the app `:notes`:
 mix phx.new apps/notes --no-ecto --live
 ```
 
-Fix webpack not watching [symlinks](https://github.com/webpack/watchpack/issues/61#issuecomment-404112524):
-
-```
-find . -type f -name 'DirectoryWatcher.js' -exec sed -i 's/followSymlinks: false/followSymlinks: true/g' {} +
-```
-
 [Home](/README.md) | [TOC](#toc)
 
 
