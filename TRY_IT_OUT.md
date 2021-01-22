@@ -35,7 +35,7 @@ sudo sh -c 'echo "127.0.0.1 links.local" >> /etc/hosts'
 sudo sh -c 'echo "127.0.0.1 notes.local" >> /etc/hosts'
 ```
 
-check that they were added:
+You can check that they were added with:
 
 ```
 $ cat /etc/hosts | tail -3
