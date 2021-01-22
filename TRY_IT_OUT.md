@@ -49,6 +49,8 @@ $ cat /etc/hosts | tail -3
 
 ## Create a Phoenix 360 Web Apps Project
 
+Now you will create the three 360 web apps, install and fetch its dependencies, thus don't for get to reply **Y** to `Fetch and install dependencies? [Yn] Y` each time you run `mix phx.new ...`.
+
 Create the root Phoenix project:
 
 ```
@@ -70,8 +72,6 @@ Next, lets create the app `:links`:
 mix phx.new apps/links --no-ecto --live
 ```
 
-and reply **Y** to `Fetch and install dependencies? [Yn] Y`.
-
 Next, time to create the app `:notes`:
 
 ```
@@ -83,13 +83,36 @@ mix phx.new apps/notes --no-ecto --live
 
 ## Phoenix 360 Web Apps Secrets
 
-In order for sessions, websockets and tokens to work accross all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/links` and `app.local/notes` will not work, because the secrets used to sign the csrf tokens aren't the same that `links.local` and `notes.local` use.
+In order for sessions, websockets and tokens to work across all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/links` and `app.local/notes` will not work, because the csrf tokens aren't signed with the same secrets used by `links.local` and `notes.local`.
 
-The following secrets must be the same for all the 360 web apps:
+The following secrets must be the same for all the 360 web app:
 
 * `secret_key_base` at `config/config.exs`.
 * `signing_salt` for Live View at `config/config.exs`.
-* `signing_salt` for the session options at `lib/app_web/endpoint.ex`
+* `signing_salt` for the session options at `lib/app_web/endpoint.ex`.
+
+So, go to each of the configuration files and edit the value for the secret to be retrieved from the environment with:
+
+```
+# file: ./phoenix360/config/config.exs
+# file: ./phoenix360/apps/links/config/config.exs
+# file: ./phoenix360/apps/notes/config/config.exs
+
+secret_key_base: System.fetch_env!('SECRET_KEY_BASE'),
+live_view: [signing_salt: System.fetch_env!('LIVE_VIEW_SIGNING_SALT')]
+```
+
+and for the endpoints:
+
+```
+# file: ./phoenix360/lib/app_web/endpoint.ex
+# file: ./phoenix360/apps/links/lib/app_web/endpoint.ex
+# file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
+
+@session_options [
+  signing_salt: System.fetch_env!('LIVE_VIEW_SIGNING_SALT')
+]
+```
 
 You can share them through environment variables:
 
@@ -98,6 +121,8 @@ export SECRET_KEY_BASE=$(mix phx.gen.secret 64)
 export LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)
 export SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)
 ```
+
+> **IMPORTANT:** For a production deployment you want to keep this secrets the same across deployments, otherwise all user connect will need to re-authenticate.
 
 [Home](/README.md) | [TOC](#toc)
 
