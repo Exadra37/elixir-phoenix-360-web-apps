@@ -80,6 +80,113 @@ mix phx.new apps/notes --no-ecto --live
 
 [Home](/README.md) | [TOC](#toc)
 
+## Config Cleanup and Security
+
+Elixir configuration is something that tends to be an issue for many developers in the moment they want to deploy their app into production as a release, and in my opinion this steams from the fact that it was built in the same way as dynamic languages do it, aka `config.#{Mix.env()}.exs`. This approach works very well during development or if you deploy in production with `mix phx.server`, that you shouldn't do.
+
+Elixir is a compiled language, therefore would be better to have only a compile time file for `dev`, `test` and another one only for the required configuration at compile time, but not a compile time config for `prod` as it as now.
+
+Also, using a `prod.secret.exs` at compile time for secrets is a weak security decision, because now the release binaries contain secrets, therefore if they are leaked in the CI/CD process or in any other way, then they can be reverse-engineered to extract those secrets. This is a huge no go in terms of security for anything I personally get involved in. Secrets MUST be only retrieved from the environment where the release will run, and until now I don't understand why Elixir is not using the widely adopted `.env` file to retrieve environment values at boot time.
+
+Fortunately Elixir as now the `runtime.exs`, but unfortunately it's optional, and the `prod` files are still present. This can be solved by deleting `config.prod`, and `prod.secret.exs`. Everything in this files will be moved into `runtime.exs` and secrets will fetched directly from the environment, and the same will be done for all the configurable values.
+
+The file `config.exs` will also be depleted from all runtime configuration, that will be moved into `runtime.exs`, thus it will look like this:
+
+```elixir
+# This file is responsible for configuring your application
+# and its dependencies with the aid of the Mix.Config module.
+#
+# This configuration file is loaded before any dependency and
+# is restricted to this project.
+
+# General application configuration
+use Mix.Config
+
+# Use Jason for JSON parsing in Phoenix
+### THIS IS THE ONLY REQUIRED COMPILE TIME CONFIGURATION ###
+config :phoenix, :json_library, Jason
+
+# Import environment specific config. This must remain at the bottom
+# of this file so it overrides the configuration defined above.
+import_config "#{Mix.env()}.exs"
+```
+
+Create the `runtime.exs` file with:
+
+```elixir
+import Config
+
+# Behind a proxy the host is for example `localhost` and port `4000`, but when
+# the server is facing directly the Internet then will be `example.com` and port `443`.
+phoenix360_host = System.fetch_env!("PHOENIX360_HOST")
+phoenix360_host_port = System.fetch_env!("PHOENIX360_HOST_PORT")
+
+# This is how the browser sees the server, thus in development it can be
+# `localhost` and port `4000`, but in production, behind a proxy or directly
+# facing the Internet, it will be `example.com` and port `443`
+phoenix360_public_url = System.fetch_env!("PHOENIX360_PUBLIC_URL")
+phoenix360_public_port = System.fetch_env!("PHOENIX360_PUBLIC_PORT")
+
+# Configures the endpoint
+config :phoenix360, Phoenix360Web.Endpoint,
+  secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
+  render_errors: [view: Phoenix360Web.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: Phoenix360.PubSub,
+  live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")],
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  url: [host: phoenix360_host, port: phoenix360_http_port],
+  http: [
+    port: phoenix360_http_port,
+    transport_options: [socket_opts: [:inet6]],
+  ]
+
+# ## SSL Support
+#
+# To get SSL working, you will need to add the `https` key
+# to the previous section and set your `:url` port to 443:
+#
+#     config :phoenix360, Phoenix360Web.Endpoint,
+#       ...
+#       url: [host: "example.com", port: 443],
+#       https: [
+#         port: 443,
+#         cipher_suite: :strong,
+#         keyfile: System.fetch_env!("PHOENIX360_SSL_KEY_PATH"),
+#         certfile: System.fetch_env!("PHOENIX360_SSL_CERT_PATH"),
+#         transport_options: [socket_opts: [:inet6]]
+#       ]
+#
+# The `cipher_suite` is set to `:strong` to support only the
+# latest and more secure SSL ciphers. This means old browsers
+# and clients may not be supported. You can set it to
+# `:compatible` for wider support.
+#
+# `:keyfile` and `:certfile` expect an absolute path to the key
+# and cert in disk or a relative path inside priv, for example
+# "priv/ssl/server.key". For all supported SSL configuration
+# options, see https://hexdocs.pm/plug/Plug.SSL.html#configure/1
+#
+# We also recommend setting `force_ssl` in your endpoint, ensuring
+# no data is ever sent via http, always redirecting to https:
+#
+#     config :phoenix360, Phoenix360Web.Endpoint,
+#       force_ssl: [hsts: true]
+#
+# Check `Plug.SSL` for all available options in `force_ssl`.
+
+if config_env() == :prod do
+  log_level =
+    (System.get_env("PHOENIX360_PROD_LOG_LEVEL") || "info")
+    |> String.downcase() |> String.to_atom()
+
+  # Configures Elixir's Logger
+  config :logger, :console,
+    level: log_level,
+    format: "$time $metadata[$level] $message\n",
+    metadata: [:request_id]
+end
+```
+
 
 ## Phoenix 360 Web Apps Secrets
 
@@ -151,7 +258,7 @@ and for the endpoints:
 
 @session_options [
   store: :cookie,
-  key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME")
+  key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME"),
   signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT")
 ]
 ```
