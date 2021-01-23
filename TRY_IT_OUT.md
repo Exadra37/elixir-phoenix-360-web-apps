@@ -17,10 +17,10 @@ Let's see how the Phoenix 360 Web Apps methodology can be used in practice by im
 You will build a Phoenix 360 web apps project, that will consist of three websites:
 
 * `app.local` - will be the main web app and the only one that runs a web server.
-* `links.local` - the standalone website that will also be available at `app.local/links`.
-* `notes.local` - the standalone website that will also be available at `app.local/notes`.
+* `links.local` - the standalone website that will also be available at `app.local/_links`.
+* `notes.local` - the standalone website that will also be available at `app.local/_notes`.
 
-The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will dispatch(not redirect or forward) any request to `app.local/links` and `app.local/notes` into the same application that runs `links.local` and `notes.local` respectively.
+The web server for `app.local` will also serve the requests for `links.local` and `notes.local`, and will dispatch(not redirect or forward) any request to `app.local/_links` and `app.local/_notes` into the same application that runs `links.local` and `notes.local` respectively.
 
 [Home](/README.md) | [TOC](#toc)
 
@@ -83,13 +83,13 @@ mix phx.new apps/notes --no-ecto --live
 
 ## Phoenix 360 Web Apps Secrets
 
-In order for sessions, websockets and tokens to work across all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/links` and `app.local/notes` will not work, because the csrf tokens aren't signed with the same secrets used by `links.local` and `notes.local`.
+In order for sessions, websockets and tokens to work across all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/_links` and `app.local/_notes` will not work, because the csrf tokens aren't signed with the same secrets used by `links.local` and `notes.local`.
 
 The following secrets must be the same for all the 360 web apps:
 
 * `secret_key_base` at `config/config.exs`.
 * `signing_salt` for Live View at `config/config.exs`.
-* `signing_salt` for the session options at `lib/app_web/endpoint.ex`.
+* `signing_salt` and `key` for the session options at `lib/app_web/endpoint.ex`.
 
 First, you need to set the environment variables with:
 
@@ -97,17 +97,18 @@ First, you need to set the environment variables with:
 echo "PHOENIX360_SECRET_KEY_BASE=$(mix phx.gen.secret 64)" >> .env
 echo "PHOENIX360_LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
 echo "PHOENIX360_SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
+echo "PHOENIX360_SESSION_COOKIE_KEY_NAME=phoenix360_web_app_key" >> .env
 ```
 
 > **IMPORTANT:** We will store the environment variables in the `.env` file, because in production you want to keep the same secrets across deployments, otherwise all connected sessions will be dropped, websockets will need to reconnect, and users will need to re-authenticate.
 
-> **SECURITY:** The use of a `.env` file is a widely used practice, but more secure solutions exist, like vaults, and one of the most used is the [vaultproject.io](https://www.vaultproject.io/).
 
 Now export them to your environment with:
 
 ```
 export $(grep -v '^#' .env | xargs -0)
 ```
+> **SECURITY:** Setting secrets from a `.env` file is a widely used practice, but more secure solutions exist, like vaults, and one of the most used is the [vaultproject.io](https://www.vaultproject.io/).
 
 Confirm they are set with:
 
@@ -118,9 +119,10 @@ env | grep PHOENIX360 -
 Output should be similar to this:
 
 ```
-PHOENIX360_SECRET_KEY_BASE=BJi83QuLvA/Avxx2FbqW2dhY1H/V/PWjNUmMe2igf1RzvVw9Lo/tfPZcDUzQHfVq
-PHOENIX360_LIVE_VIEW_SIGNING_SALT=RpQae1VGBO9C6R8El33YtzIIvoxvgngk
-PHOENIX360_SESSION_SIGNING_SALT=S3JZE2IgcR5rp9Ou2XUc62SdSUEPTsuM
+PHOENIX360_SECRET_KEY_BASE=BJi83QuLvA...
+PHOENIX360_LIVE_VIEW_SIGNING_SALT=RpQae1...
+PHOENIX360_SESSION_SIGNING_SALT=S3JZE2I...
+PHOENIX360_SESSION_COOKIE_KEY_NAME=phoenix360_web_app_key
 ```
 
 Next, add the `.env` file to `.gitignore`:
@@ -148,6 +150,8 @@ and for the endpoints:
 # file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
 
 @session_options [
+  store: :cookie,
+  key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME")
   signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT")
 ]
 ```
@@ -157,15 +161,15 @@ and for the endpoints:
 
 ## Phoenix 360 Web Apps Routing Dispatch
 
-Let's add the configuration for the new apps:
+First, let's add the configuration for the new apps:
 
 ```elixir
 # file: ./phoenix360/config/config.exs
 
 phoenix360_http_port = System.fetch_env!("PHOENIX360_HTTP_PORT")
 phoenix360_host = System.fetch_env!("PHOENIX360_HOST")
-links_host = System.fetch_env!("LINKS_HOST")
-notes_host = System.fetch_env!("NOTES_HOST")
+links_host = System.fetch_env!("PHOENIX360_LINKS_HOST")
+notes_host = System.fetch_env!("PHOENIX360_NOTES_HOST")
 
 config :phoenix360, Phoenix360Web.Endpoint,
   http: [
@@ -178,12 +182,12 @@ config :phoenix360, Phoenix360Web.Endpoint,
           # @PHOENIX_360_WEB_APPS - Each included 360 web app needs to have an
           #   endpoint in the top level 360 web app. This is necessary in order
           #   for the top level 360 web app to know how to dispatch the requests.
-          #   For example a request to app.local/links/* will be dispatched to
+          #   For example a request to app.local/_links/* will be dispatched to
           #   the `/links/*` endpoint for the LinksWeb.Router.
           #
           # {:path_match, :handler, :initial_state}
-          {"/links/[...]", Phoenix.Endpoint.Cowboy2Handler, {LinksWeb.Endpoint, []}},
-          {"/notes/[...]", Phoenix.Endpoint.Cowboy2Handler, {NotesWeb.Endpoint, []}},
+          {"/_links/[...]", Phoenix.Endpoint.Cowboy2Handler, {LinksWeb.Endpoint, []}},
+          {"/_notes/[...]", Phoenix.Endpoint.Cowboy2Handler, {NotesWeb.Endpoint, []}},
 
           # @PHOENIX_360_WEB_APPS - This tells that all other request must be
           #   dispatched to the Phoenix360Web.Router, aka the one for the top
@@ -225,6 +229,30 @@ config :notes, NotesWeb.Endpoint,
 
 ```
 
+Next, let's add support for the `_links` endpoint in the router for the `:links` 360 web app:
+
+```elixir
+# @PHOENIX_360_WEB_APPS - support the endpoint used in the root 360 web app to
+#   dispatch the incoming request to `app.local/_links`.
+scope "/_links", LinksWeb do
+  pipe_through :browser
+
+  live "/", PageLive, :index
+end
+```
+
+Finally, let's add support for the `_notes` endpoint in the router for the `:notes` 360 web app:
+
+```elixir
+# @PHOENIX_360_WEB_APPS - support the endpoint used in the root 360 web app to
+#   dispatch the incoming request to `app.local/_notes`.
+scope "/_notes", NotesWeb do
+  pipe_through :browser
+
+  live "/", PageLive, :index
+end
+```
+
 [Home](/README.md) | [TOC](#toc)
 
 
@@ -237,10 +265,39 @@ config :notes, NotesWeb.Endpoint,
 
 config :phoenix360, Phoenix360Web.Endpoint,
   ### REMOVE THE LINE FOR SETTING THE HTTP PORT ###
-  # The http port is now set in `config.exs` via the env var.
+  # @PHOENIX_360_WEB_APPS - The http port is now set in `config.exs` via an env
+  #   var.
   # http: [port: 4000],
   debug_errors: true,
-
+  code_reloader: true,
+  check_origin: false,
+  watchers: [
+    node: [
+      "node_modules/webpack/bin/webpack.js",
+      "--mode",
+      "development",
+      "--watch-stdin",
+      cd: Path.expand("../assets", __DIR__)
+    ],
+    # @PHOENIX_360_WEB_APPS - Watch for static assets changes in the `:links`
+    #   360 web app.
+    node: [
+      "node_modules/webpack/bin/webpack.js",
+      "--mode",
+      "development",
+      "--watch-stdin",
+      cd: Path.expand("../apps/links/assets", __DIR__)
+    ],
+    # @PHOENIX_360_WEB_APPS - Watch for static assets changes in the `:notes`
+    #   360 web app.
+    node: [
+      "node_modules/webpack/bin/webpack.js",
+      "--mode",
+      "development",
+      "--watch-stdin",
+      cd: Path.expand("../apps/notes/assets", __DIR__)
+    ]
+  ]
 
 config :phoenix360, Phoenix360Web.Endpoint,
   live_reload: [
@@ -252,11 +309,11 @@ config :phoenix360, Phoenix360Web.Endpoint,
 
       # @PHOENIX_360_WEB_APPS - we need to give the relative path to each of the
       # included 360 web apps, otherwise live code reload will not work at the
-      # top level, eg: app.local/links.
-      ~r"apps/notes/lib/notes_web/(live|views)/.*(ex)$",
-      ~r"apps/notes/lib/notes_web/templates/.*(eex)$",
+      # top level, eg: app.local/_links.
       ~r"apps/links/lib/links_web/(live|views)/.*(ex)$",
-      ~r"apps/links/lib/links_web/templates/.*(eex)$"
+      ~r"apps/links/lib/links_web/templates/.*(eex)$",
+      ~r"apps/notes/lib/notes_web/templates/.*(eex)$",
+      ~r"apps/notes/lib/notes_web/(live|views)/.*(ex)$"
     ]
   ]
 ```
@@ -301,8 +358,8 @@ For the `:links` 360 included web app:
 
 # @PHOENIX_360_WEB_APPS
 config :links, LinksWeb.Endpoint,
-  # Adds a prefix to the static assets path, eg: app.local/links/css/app.css.
-  static_url: [path: "/links"]
+  # Adds a prefix to the static assets path, eg: app.local/_links/css/app.css.
+  static_url: [path: "/_links"]
 ```
 
 For the `:notes` 360 included web app:
@@ -312,8 +369,8 @@ For the `:notes` 360 included web app:
 
 # @PHOENIX_360_WEB_APPS
 config :notes, NotesWeb.Endpoint,
-  # Adds a prefix to the static assets path, eg: app.local/notes/css/app.css.
-  static_url: [path: "/notes"]
+  # Adds a prefix to the static assets path, eg: app.local/_notes/css/app.css.
+  static_url: [path: "/_notes"]
 ```
 
 Next, we need to enable live reload for each 360 web app static assets:
@@ -325,7 +382,7 @@ Next, we need to enable live reload for each 360 web app static assets:
 #   the same here.
 plug Plug.Static,
     #at: "/",
-    at: "/links",
+    at: "/_links",
     from: :links,
     gzip: false,
     only: ~w(css fonts images js favicon.ico robots.txt)
@@ -340,7 +397,7 @@ and for the the `:notes` 360 web app:
 #   the same here.
 plug Plug.Static,
     #at: "/",
-    at: "/notes",
+    at: "/_notes",
     from: :notes,
     gzip: false,
     only: ~w(css fonts images js favicon.ico robots.txt)
@@ -348,6 +405,34 @@ plug Plug.Static,
 
 [Home](/README.md) | [TOC](#toc)
 
+
+## Personalization
+
+Each of the three 360 web apps you created are all identical, because they are the default Phoenix template.
+
+Now, to be able to distinguish that when you go to `app.local/_links` you are indeed in `links.local`, and that when you go to `app.local/_notes` you are at `notes.local`, a small CSS tweak will do the trick.
+
+For the `:links` app add to the end of the `phoenix.css` file:
+
+```css
+# file: phoenix360/apps/links/assets/css/phoenix.css
+
+header {background: #7fabbf};
+```
+
+For the `:notes` app add to the end of the `phoenix.css` file:
+
+```css
+# file: phoenix360/apps/notes/assets/css/phoenix.css
+
+header {background: #bfb27f};
+```
+
+Fix the home page link to be always relative to the root of the 360 web app:
+
+```
+find . -type f -name 'root.html.*' -exec sed -i 's|href="https://phoenixframework.org/"|href="/"|g' {} +
+```
 
 ## Mix Dependencies
 
