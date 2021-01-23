@@ -1,0 +1,3 @@
+127.0.0.1 app.local /etc/hosts
+127.0.0.1 links.local /etc/hosts
+127.0.0.1 notes.local /etc/hosts

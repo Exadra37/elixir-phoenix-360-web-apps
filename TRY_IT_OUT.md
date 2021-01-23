@@ -101,7 +101,7 @@ echo "PHOENIX360_SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
 
 > **IMPORTANT:** We will store the environment variables in the `.env` file, because in production you want to keep the same secrets across deployments, otherwise all connected sessions will be dropped, websockets will need to reconnect, and users will need to re-authenticate.
 
-> **SECURITY:** Here we use a `.env` file but for a more secure solution you may want to look to store the secrets in vaults, and one of the most used is the [vaultproject.io](https://www.vaultproject.io/).
+> **SECURITY:** The use of a `.env` file is a widely used practice, but more secure solutions exist, like vaults, and one of the most used is the [vaultproject.io](https://www.vaultproject.io/).
 
 Now export them to your environment with:
 
@@ -115,7 +115,7 @@ Confirm they are set with:
 env | grep PHOENIX360 -
 ```
 
-Output should look similar to this:
+Output should be similar to this:
 
 ```
 PHOENIX360_SECRET_KEY_BASE=BJi83QuLvA/Avxx2FbqW2dhY1H/V/PWjNUmMe2igf1RzvVw9Lo/tfPZcDUzQHfVq
@@ -123,7 +123,13 @@ PHOENIX360_LIVE_VIEW_SIGNING_SALT=RpQae1VGBO9C6R8El33YtzIIvoxvgngk
 PHOENIX360_SESSION_SIGNING_SALT=S3JZE2IgcR5rp9Ou2XUc62SdSUEPTsuM
 ```
 
-Now, go to each of the configuration files and edit the value for the secret to be retrieved from the environment with:
+Next, add the `.env` file to `.gitignore`:
+
+```
+echo ".env" >> .gitignore
+```
+
+Now, go to each configuration file and edit the value for the secret to be retrieved from the environment with:
 
 ```elixir
 # file: ./phoenix360/config/config.exs
@@ -156,10 +162,10 @@ Let's add the configuration for the new apps:
 ```elixir
 # file: ./phoenix360/config/config.exs
 
-phoenix360_http_port = System.fetch_env!(PHOENIX360_HTTP_PORT)
-phoenix360_host = System.fetch_env!(PHOENIX360_HOST)
-links_host = System.fetch_env!(LINKS_HOST)
-notes_host = System.fetch_env!(NOTES_HOST)
+phoenix360_http_port = System.fetch_env!("PHOENIX360_HTTP_PORT")
+phoenix360_host = System.fetch_env!("PHOENIX360_HOST")
+links_host = System.fetch_env!("LINKS_HOST")
+notes_host = System.fetch_env!("NOTES_HOST")
 
 config :phoenix360, Phoenix360Web.Endpoint,
   http: [
@@ -230,6 +236,13 @@ config :notes, NotesWeb.Endpoint,
 # file: ./phoenix360/config/dev.exs
 
 config :phoenix360, Phoenix360Web.Endpoint,
+  ### REMOVE THE LINE FOR SETTING THE HTTP PORT ###
+  # The http port is now set in `config.exs` via the env var.
+  # http: [port: 4000],
+  debug_errors: true,
+
+
+config :phoenix360, Phoenix360Web.Endpoint,
   live_reload: [
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
@@ -256,7 +269,7 @@ For the `:links` 360 included web app:
 # file: ./phoenix360/apps/links/config/dev.exs
 
 # @PHOENIX_360_WEB_APPS
-config :links, NotesWeb.Endpoint,
+config :links, LinksWeb.Endpoint,
   # When this web app is being used as a dependency of another web app the code
   # will not recompile on a live reload event if we not explicitly enable it:
   reloadable_apps: [:links]
@@ -287,7 +300,7 @@ For the `:links` 360 included web app:
 # file: ./phoenix360/apps/links/config/config.exs
 
 # @PHOENIX_360_WEB_APPS
-config :links, NotesWeb.Endpoint,
+config :links, LinksWeb.Endpoint,
   # Adds a prefix to the static assets path, eg: app.local/links/css/app.css.
   static_url: [path: "/links"]
 ```
