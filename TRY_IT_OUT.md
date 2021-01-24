@@ -82,7 +82,7 @@ mix phx.new apps/notes --no-ecto --live
 
 ## Config Cleanup and Security Improvements
 
-Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, thus making it the ideal place to have all configuration that is not strictly required at compile time, and the ideal place to put all configuration that may be changed on the targeted production environment.
+Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, thus making it the ideal place for all configuration not strictly required at compile time, thus allowing to configure the application as needed in the target environment where it will run.
 
 The files `config.prod` and `prod.secret.exs` will be deleted and everything on them will be moved into `runtime.exs`. Configuration values and secrets on `runtime.exs` will be fetched directly from the environment.
 
