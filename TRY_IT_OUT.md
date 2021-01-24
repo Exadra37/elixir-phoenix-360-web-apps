@@ -80,15 +80,13 @@ mix phx.new apps/notes --no-ecto --live
 
 [Home](/README.md) | [TOC](#toc)
 
-## Config Cleanup and Security
+## Config Cleanup and Security Improvements
 
-Elixir configuration is something that tends to be an issue for many developers in the moment they want to deploy their app into production as a release, and in my opinion this steams from the fact that it was built in the same way as dynamic languages do it, aka `config.#{Mix.env()}.exs`. This approach works very well during development or if you deploy in production with `mix phx.server`, that you shouldn't do.
+Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, thus making it the ideal place to have all configuration that is not strictly required at compile time, and the ideal place to put all configuration that may be changed on the targeted production environment.
 
-Elixir is a compiled language, therefore would be better to have only a compile time file for `dev`, `test` and another one only for the required configuration at compile time, but not a compile time config for `prod` as it as now.
+The files `config.prod` and `prod.secret.exs` will be deleted and everything on them will be moved into `runtime.exs`. Configuration values and secrets on `runtime.exs` will be fetched directly from the environment.
 
-Also, using a `prod.secret.exs` at compile time for secrets is a weak security decision, because now the release binaries contain secrets, therefore if they are leaked in the CI/CD process or in any other way, then they can be reverse-engineered to extract those secrets. This is a huge no go in terms of security for anything I personally get involved in. Secrets MUST be only retrieved from the environment where the release will run, and until now I don't understand why Elixir is not using the widely adopted `.env` file to retrieve environment values at boot time.
-
-Fortunately Elixir as now the `runtime.exs`, but unfortunately it's optional, and the `prod` files are still present. This can be solved by deleting `config.prod`, and `prod.secret.exs`. Everything in this files will be moved into `runtime.exs` and secrets will fetched directly from the environment, and the same will be done for all the configurable values.
+> **IMPORTANT:** Using a `prod.secret.exs` at compile time for secrets is not the best approach in terms of security, because the release binaries will contain the secrets, therefore if the secrets are leaked in the CI/CD process or in any other way, then the release binary that goes into production is compromised. Also, any binary can be reverse-engineered to extract those secrets. Secrets are best to only be retrieved from the production environment where the release will run.
 
 The file `config.exs` will also be depleted from all runtime configuration, that will be moved into `runtime.exs`, thus it will look like this:
 
@@ -111,7 +109,7 @@ config :phoenix, :json_library, Jason
 import_config "#{Mix.env()}.exs"
 ```
 
-Create the `runtime.exs` file with:
+So, the `runtime.exs` configuration file needs to be created with:
 
 ```elixir
 import Config
