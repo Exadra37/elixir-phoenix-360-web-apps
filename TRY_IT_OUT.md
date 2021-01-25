@@ -82,7 +82,7 @@ mix phx.new apps/notes --no-ecto --live
 
 ## Config Cleanup and Security Improvements
 
-Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, thus making it the ideal place for all configuration not strictly required at compile time, thus allowing to configure the application as needed in the target environment where it will run.
+Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, therefore making it the ideal place for all configuration not strictly required at compile time, thus allowing to configure the application as needed in the target environment where it will run.
 
 The files `config.prod` and `prod.secret.exs` will be deleted and everything on them will be moved into `runtime.exs`. Configuration values and secrets on `runtime.exs` will be fetched directly from the environment.
 
@@ -104,6 +104,11 @@ use Mix.Config
 ### THIS IS THE ONLY REQUIRED COMPILE TIME CONFIGURATION ###
 config :phoenix, :json_library, Jason
 
+# @PHOENIX_360_WEB_APPS - You need to import the configuration for each of the
+#   included 360 web apps, because we are not starting them as servers.
+import_config "../apps/links/config/config.exs"
+import_config "../apps/notes/config/config.exs"
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"
@@ -114,16 +119,23 @@ So, the `runtime.exs` configuration file needs to be created with:
 ```elixir
 import Config
 
-# Behind a proxy the host is for example `localhost` and port `4000`, but when
-# the server is facing directly the Internet then will be `example.com` and port `443`.
-phoenix360_host = System.fetch_env!("PHOENIX360_HOST")
-phoenix360_host_port = System.fetch_env!("PHOENIX360_HOST_PORT")
+# Use here the hostname for the server itself, that is not necessarily the one
+# you type in the browser.
+# Behind a proxy or in a docker container the host is for example `localhost`
+# and port `4000`, but when the server is facing directly the Internet will be
+# like `example.com` and port `443`.
+host = System.fetch_env!("PHOENIX360_HOST")
+host_port = System.fetch_env!("PHOENIX360_HOST_PORT")
 
-# This is how the browser sees the server, thus in development it can be
-# `localhost` and port `4000`, but in production, behind a proxy or directly
-# facing the Internet, it will be `example.com` and port `443`
-phoenix360_public_url = System.fetch_env!("PHOENIX360_PUBLIC_URL")
-phoenix360_public_port = System.fetch_env!("PHOENIX360_PUBLIC_PORT")
+# Use here the same host and port you type in the browser. So, in development it
+# can be `localhost` and port `4000`, but in production, behind a proxy, on a
+# docker container or directly facing the Internet, it will be like
+# `example.com` and port `443`.
+public_host = System.fetch_env!("PHOENIX360_PUBLIC_HOST")
+public_host_port = System.fetch_env!("PHOENIX360_PUBLIC_HOST_PORT")
+
+links_public_host = System.fetch_env!("PHOENIX360_LINKS_PUBLIC_HOST")
+notes_public_host = System.fetch_env!("PHOENIX360_NOTES_PUBLIC_HOST")
 
 # Configures the endpoint
 config :phoenix360, Phoenix360Web.Endpoint,
@@ -132,9 +144,9 @@ config :phoenix360, Phoenix360Web.Endpoint,
   pubsub_server: Phoenix360.PubSub,
   live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")],
   cache_static_manifest: "priv/static/cache_manifest.json",
-  url: [host: phoenix360_host, port: phoenix360_http_port],
+  url: [host: host, port: host_port],
   http: [
-    port: phoenix360_http_port,
+    port: public_host_port,
     transport_options: [socket_opts: [:inet6]],
   ]
 
@@ -185,6 +197,8 @@ if config_env() == :prod do
 end
 ```
 
+[Home](/README.md) | [TOC](#toc)
+
 
 ## Phoenix 360 Web Apps Secrets
 
@@ -196,17 +210,64 @@ The following secrets must be the same for all the 360 web apps:
 * `signing_salt` for Live View at `config/config.exs`.
 * `signing_salt` and `key` for the session options at `lib/app_web/endpoint.ex`.
 
-First, you need to set the environment variables with:
+Now, edit the `runtime.exs` file and add to it:
+
+```elixir
+# file: ./phoenix360/config/runtime.exs
+
+config :links, LinksWeb.Endpoint,
+  url: [host: System.fetch_env!("PHOENIX360_LINKS_HOST")],
+  secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
+  render_errors: [view: LinksWeb.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: Links.PubSub,
+  live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")]
+
+config :notes, NotesWeb.Endpoint,
+  url: [host: "notes.local"],
+  secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
+  render_errors: [view: NotesWeb.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: Notes.PubSub,
+  live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")]
+```
+
+and for the endpoints:
+
+```elixir
+# file: ./phoenix360/lib/app_web/endpoint.ex
+# file: ./phoenix360/apps/links/lib/app_web/endpoint.ex
+# file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
+
+@session_options [
+  store: :cookie,
+  key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME"),
+  signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT")
+]
+```
+
+[Home](/README.md) | [TOC](#toc)
+
+
+## Phoenix 360 Web Apps Environment Variables
+
+Until now you have used a lot of configuration driven by environment variables, therefore it's time to set them up:
 
 ```
 echo "PHOENIX360_SECRET_KEY_BASE=$(mix phx.gen.secret 64)" >> .env
 echo "PHOENIX360_LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
 echo "PHOENIX360_SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
+echo "PHOENIX360_SESSION_ENCRYPTION_SALT=$(mix phx.gen.secret 32)" >> .env
 echo "PHOENIX360_SESSION_COOKIE_KEY_NAME=phoenix360_web_app_key" >> .env
+echo "PHOENIX360_HOST=app.local" >> .env
+echo "PHOENIX360_HOST_PORT=4000" >> .env
+echo "PHOENIX360_PUBLIC_HOST=app.local" >> .env
+echo "PHOENIX360_PUBLIC_HOST_PORT=4000" >> .env
+echo "PHOENIX360_LINKS_PUBLIC_HOST=links.local" >> .env
+echo "PHOENIX360_LINKS_HOST=links.local" >> .env
+echo "PHOENIX360_NOTES_HOST=notes.local" >> .env
+echo "PHOENIX360_NOTES_PUBLIC_HOST=notes.local" >> .env
 ```
 
 > **IMPORTANT:** We will store the environment variables in the `.env` file, because in production you want to keep the same secrets across deployments, otherwise all connected sessions will be dropped, websockets will need to reconnect, and users will need to re-authenticate.
-
 
 Now export them to your environment with:
 
@@ -228,6 +289,7 @@ PHOENIX360_SECRET_KEY_BASE=BJi83QuLvA...
 PHOENIX360_LIVE_VIEW_SIGNING_SALT=RpQae1...
 PHOENIX360_SESSION_SIGNING_SALT=S3JZE2I...
 PHOENIX360_SESSION_COOKIE_KEY_NAME=phoenix360_web_app_key
+...
 ```
 
 Next, add the `.env` file to `.gitignore`:
@@ -236,49 +298,20 @@ Next, add the `.env` file to `.gitignore`:
 echo ".env" >> .gitignore
 ```
 
-Now, go to each configuration file and edit the value for the secret to be retrieved from the environment with:
-
-```elixir
-# file: ./phoenix360/config/config.exs
-# file: ./phoenix360/apps/links/config/config.exs
-# file: ./phoenix360/apps/notes/config/config.exs
-
-secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
-live_view: [signing_salt: System.fetch_env!("PHOENIX360_LIVE_VIEW_SIGNING_SALT")]
-```
-
-and for the endpoints:
-
-```elixir
-# file: ./phoenix360/lib/app_web/endpoint.ex
-# file: ./phoenix360/apps/links/lib/app_web/endpoint.ex
-# file: ./phoenix360/apps/notes/lib/app_web/endpoint.ex
-
-@session_options [
-  store: :cookie,
-  key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME"),
-  signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT")
-]
-```
-
 [Home](/README.md) | [TOC](#toc)
 
 
 ## Phoenix 360 Web Apps Routing Dispatch
 
-First, let's add the configuration for the new apps:
+To be able to receive requests at `app.local/_links` and `app.local/_notes` and dispatch them to `links.local` and `notes.local` without performing a redirect or forwarding the request you will configure Cowboy directly, and for that you need to replace the `http` configuration in `runtime.exs` with:
 
 ```elixir
-# file: ./phoenix360/config/config.exs
-
-phoenix360_http_port = System.fetch_env!("PHOENIX360_HTTP_PORT")
-phoenix360_host = System.fetch_env!("PHOENIX360_HOST")
-links_host = System.fetch_env!("PHOENIX360_LINKS_HOST")
-notes_host = System.fetch_env!("PHOENIX360_NOTES_HOST")
+# file: ./phoenix360/config/runtime.exs
 
 config :phoenix360, Phoenix360Web.Endpoint,
   http: [
     port: phoenix360_http_port,
+    transport_options: [socket_opts: [:inet6]],
     # @link https://ninenines.eu/docs/en/cowboy/2.7/guide/routing/
     dispatch: [
       {
@@ -317,26 +350,24 @@ config :phoenix360, Phoenix360Web.Endpoint,
     ]
   ]
 
-# @PHOENIX_360_WEB_APPS - We need to import the configuration for each of the
-#   included 360 web apps.
-import_config "../apps/links/config/config.exs"
-import_config "../apps/notes/config/config.exs"
-
 # @PHOENIX_360_WEB_APPS - No need to have a server running for `:links`, because
-#    the request will come through the main 360 web app `phoenix360`:
+#    the requests will be handled by the Cowboy server for the main 360 web app
+#    `phoenix360`:
 config :links, LinksWeb.Endpoint,
   server: false
 
 # @PHOENIX_360_WEB_APPS - No need to have a server running for `:notes`, because
-#    the request will come through the main 360 web app `phoenix360`:
+#    the requests will be handled by the Cowboy server for the main 360 web app
+#    `phoenix360`:
 config :notes, NotesWeb.Endpoint,
   server: false
-
 ```
 
 Next, let's add support for the `_links` endpoint in the router for the `:links` 360 web app:
 
 ```elixir
+# file: phoenix360/apps/links/lib/links_web/router.ex
+
 # @PHOENIX_360_WEB_APPS - support the endpoint used in the root 360 web app to
 #   dispatch the incoming request to `app.local/_links`.
 scope "/_links", LinksWeb do
@@ -349,6 +380,8 @@ end
 Finally, let's add support for the `_notes` endpoint in the router for the `:notes` 360 web app:
 
 ```elixir
+# file: phoenix360/apps/notes/lib/notes_web/router.ex
+
 # @PHOENIX_360_WEB_APPS - support the endpoint used in the root 360 web app to
 #   dispatch the incoming request to `app.local/_notes`.
 scope "/_notes", NotesWeb do
@@ -369,10 +402,6 @@ end
 # file: ./phoenix360/config/dev.exs
 
 config :phoenix360, Phoenix360Web.Endpoint,
-  ### REMOVE THE LINE FOR SETTING THE HTTP PORT ###
-  # @PHOENIX_360_WEB_APPS - The http port is now set in `config.exs` via an env
-  #   var.
-  # http: [port: 4000],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
@@ -433,7 +462,7 @@ For the `:links` 360 included web app:
 # @PHOENIX_360_WEB_APPS
 config :links, LinksWeb.Endpoint,
   # When this web app is being used as a dependency of another web app the code
-  # will not recompile on a live reload event if we not explicitly enable it:
+  # will not recompile on a live reload event if you do not explicitly enable it:
   reloadable_apps: [:links]
 ```
 
@@ -445,7 +474,7 @@ For the `:links` 360 included web app:
 # @PHOENIX_360_WEB_APPS
 config :notes, NotesWeb.Endpoint,
   # When this web app is being used as a dependency of another web app the code
-  # will not recompile on a live reload event if we not explicitly enable it:
+  # will not recompile on a live reload event if you do not explicitly enable it:
   reloadable_apps: [:notes]
 ```
 
