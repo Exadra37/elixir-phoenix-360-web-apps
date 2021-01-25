@@ -137,7 +137,12 @@ public_host_port = System.fetch_env!("PHOENIX360_PUBLIC_HOST_PORT")
 links_public_host = System.fetch_env!("PHOENIX360_LINKS_PUBLIC_HOST")
 notes_public_host = System.fetch_env!("PHOENIX360_NOTES_PUBLIC_HOST")
 
-# Configures the endpoint
+# Phoenix by default compiles secrets and salt values into the release, and this
+# becomes a security concern, because this values can be leaked during the CI/CD
+# pipeline. Also, anyone getting their hands in the release binary can reverse
+# engineer it to extract this sensitive values, therefore you may put a release
+# into production without knowing that is already compromised or it can be
+# compromised after you deploy it.
 config :phoenix360, Phoenix360Web.Endpoint,
   secret_key_base: System.fetch_env!("PHOENIX360_SECRET_KEY_BASE"),
   render_errors: [view: Phoenix360Web.ErrorView, accepts: ~w(html json), layout: false],
@@ -200,7 +205,68 @@ end
 [Home](/README.md) | [TOC](#toc)
 
 
-## Phoenix 360 Web Apps Secrets
+## Endpoint Session Configuration Security
+
+Let's remove compile time secrets and salts, because they are a security risk
+for production releases.
+
+On each 360 web app endpoint replace on the top of the file the declaration for `@session_options` attribute with:
+
+```elixir
+@session_options {NotesWeb.Endpoint.RuntimeSession, :options, []}
+
+defmodule RuntimeSession do
+  def init(_opts) do
+    options()
+    |> Plug.Session.init()
+  end
+
+  def call(conn, opts) do
+    Plug.Session.call(conn, opts)
+  end
+
+  def options() do
+    Application.fetch_env!(:notes, NotesWeb.Endpoint)[:session_options]
+  end
+end
+```
+
+And at the end of the Endpoint file replace the `Plug.Session`:
+
+```elixir
+plug Plug.MethodOverride
+plug Plug.Head
+plug Plug.Session # <--- TO BE REPLACED
+plug NotesWeb.Router
+```
+
+with:
+
+```elixir
+plug Plug.MethodOverride
+plug Plug.Head
+plug NotesWeb.Endpoint.RuntimeSession <--- REPLACED
+plug NotesWeb.Router
+```
+
+Now, that all the 360 web apps retrieve their secrets and salts at runtime we need to configure `runtime.exs` to support it:
+
+```elixir
+config :phoenix360, Phoenix360Web.Endpoint,
+  # To be retrieved at runtime by `Phoenix360Web.PlugSession.options/0`.
+  session_options:
+    [
+      store: :cookie,
+      key: "_" <> System.fetch_env!("PHOENIX360_SESSION_COOKIE_KEY_NAME"),
+      signing_salt: System.fetch_env!("PHOENIX360_SESSION_SIGNING_SALT"),
+      encryption_salt: System.fetch_env!("PHOENIX360_SESSION_ENCRYPTION_SALT"),
+    ],
+```
+
+[Home](/README.md) | [TOC](#toc)
+
+
+## Phoenix 360 Web Apps Webscokets
 
 In order for sessions, websockets and tokens to work across all 360 web apps it's necessary to use the same secrets across all of them, otherwise the websockets at `app.local/_links` and `app.local/_notes` will not work, because the csrf tokens aren't signed with the same secrets used by `links.local` and `notes.local`.
 
