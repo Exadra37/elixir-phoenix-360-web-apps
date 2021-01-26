@@ -84,11 +84,14 @@ echo "PHOENIX360_SECRET_KEY_BASE=$(mix phx.gen.secret 64)" >> .env
 echo "PHOENIX360_LIVE_VIEW_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
 echo "PHOENIX360_SESSION_SIGNING_SALT=$(mix phx.gen.secret 32)" >> .env
 echo "PHOENIX360_SESSION_ENCRYPTION_SALT=$(mix phx.gen.secret 32)" >> .env
-echo "PHOENIX360_SESSION_COOKIE_KEY_NAME=phoenix360_web_app_key" >> .env
-echo "PHOENIX360_HOST=app.local" >> .env
-echo "PHOENIX360_HOST_PORT=4000" >> .env
-echo "PHOENIX360_PUBLIC_HOST=app.local" >> .env
-echo "PHOENIX360_PUBLIC_HOST_PORT=4000" >> .env
+echo "PHOENIX360_SERVER_HOSTNAME=app.local" >> .env
+echo "PHOENIX360_SERVER_HTTP_PORT=4000" >> .env
+echo "PHOENIX360_SERVER_HTTPS_PORT=4001" >> .env
+echo "PHOENIX360_PUBLIC_DOMAIN=app.local" >> .env
+echo "PHOENIX360_PUBLIC_DOMAIN_HTTP_PORT=4000" >> .env
+echo "PHOENIX360_PUBLIC_DOMAIN_HTTPS_PORT=4001" >> .env
+echo "LETSENCRYPT_ACME_HTTP_PORT=4002" >> .env
+echo "LETSENCRYPT_ACME_EMAILS=__your__@mail.com" >> .env
 ```
 
 > **IMPORTANT:** You will store the environment variables in the `.env` file, because in production you want to keep the same secrets across deployments, otherwise all connected sessions will be dropped, websockets will need to reconnect, and users will need to re-authenticate.
@@ -304,7 +307,7 @@ plug Phoenix360Web.Router
 # Passing to `plug` a function means that it will be invoke only at runtime,
 # therefore avoiding that the release is built with the session signing and
 # encryption salt values, that creates a security concern.
-defp _plug_session(conn, opts) do
+defp _plug_session(conn, _opts) do
   opts = _session_options() |> Plug.Session.init()
   Plug.Session.call(conn, opts)
 end
