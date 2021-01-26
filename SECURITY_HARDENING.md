@@ -128,6 +128,26 @@ echo ".env" >> .gitignore
 [Home](/README.md) | [TOC](#toc)
 
 
+## Phoenix Security
+
+```elixir
+defmodule Phoenix360Web.Security do
+  def redirect_to_https() do
+    [host: host, port: port] = url = Application.fetch_env!(:phoenix360, Phoenix360Web.Endpoint)[:url]
+    "#{host}:#{port}"
+  end
+
+  def session_options() do
+    Application.fetch_env!(:phoenix360, Phoenix360Web.Endpoint)[:session_options]
+  end
+
+  def plug_session(conn, _opts) do
+    opts = Phoenix360Web.Security.session_options() |> Plug.Session.init()
+    Plug.Session.call(conn, opts)
+  end
+end
+```
+
 ## Config Cleanup and Security Improvements
 
 Elixir as now the `runtime.exs` configuration file that is invoked each time the application is started, therefore making it the ideal place for all configuration not strictly required at compile time, thus allowing to configure the application as needed in the target environment where it will run.
@@ -157,14 +177,16 @@ The file `config.exs` will also be depleted from all runtime configuration, that
 use Mix.Config
 
 # Use Jason for JSON parsing in Phoenix
-### THIS IS THE ONLY REQUIRED COMPILE TIME CONFIGURATION ###
+### REQUIRED COMPILE TIME CONFIGURATION ###
 config :phoenix, :json_library, Jason
+
+### OPTIONAL COMPILE TIME CONFIGURATION ###
+config :phoenix360, Phoenix360Web.Endpoint,
+  # Check `Plug.SSL` for all available options in `force_ssl`.
+  force_ssl: [hsts: true, expires: 300, host: {Phoenix360Web.Endpoint, :redirect_to_https, []}]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-#
-# Excludes `:prod` because it's configuration has moved to `runtime.exs` and
-# it's now driven by environment variables.
 if Mix.env() != :prod do
   import_config "#{Mix.env()}.exs"
 end
@@ -182,15 +204,16 @@ import Config
 # Behind a proxy or in a docker container the host is for example `localhost`
 # and port `4000`, but when the server is facing directly the Internet will be
 # like `example.com` and port `443`.
-host = System.fetch_env!("PHOENIX360_HOST")
-host_port = System.fetch_env!("PHOENIX360_HOST_PORT")
+server_hostname = System.fetch_env!("PHOENIX360_SERVER_HOSTNAME")
+server_http_port = System.fetch_env!("PHOENIX360_SERVER_HTTP_PORT")
 
 # Use here the same host and port you type in the browser. So, in development it
 # can be `localhost` and port `4000`, but in production, behind a proxy, on a
 # docker container or directly facing the Internet, it will be like
 # `example.com` and port `443`.
-public_host = System.fetch_env!("PHOENIX360_PUBLIC_HOST")
-public_host_port = System.fetch_env!("PHOENIX360_PUBLIC_HOST_PORT")
+public_domain = System.fetch_env!("PHOENIX360_PUBLIC_DOMAIN")
+public_domain_http_port = System.fetch_env!("PHOENIX360_PUBLIC_DOMAIN_HTTP_PORT")
+public_domain_https_port = System.fetch_env!("PHOENIX360_PUBLIC_DOMAIN_HTTPS_PORT")
 
 # Phoenix by default compiles secrets and salt values into the release, and this
 # becomes a security concern, because this values can be leaked during the CI/CD
@@ -206,9 +229,9 @@ config :phoenix360, Phoenix360Web.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json",
   check_origin: true,
   server: true,
-  url: [host: host, port: host_port],
+  url: [host: public_domain, port: public_domain_http_port],
   http: [
-    port: public_host_port,
+    port: server_http_port,
     transport_options: [socket_opts: [:inet6]],
   ]
 
@@ -217,17 +240,16 @@ config :phoenix360, Phoenix360Web.Endpoint,
 # To get SSL working, you will need to add the `https` key
 # to the previous section and set your `:url` port to 443:
 #
-#     config :phoenix360, Phoenix360Web.Endpoint,
-#       ...
-#       url: [host: "example.com", port: 443],
-#       https: [
-#         port: 443,
-#         cipher_suite: :strong,
-#         keyfile: System.fetch_env!("PHOENIX360_SSL_KEY_PATH"),
-#         certfile: System.fetch_env!("PHOENIX360_SSL_CERT_PATH"),
-#         transport_options: [socket_opts: [:inet6]]
-#       ]
-#
+config :phoenix360, Phoenix360Web.Endpoint,
+  url: [host: public_domain, port: public_domain_https_port],
+  https: [
+    port: public_domain_https_port,
+    cipher_suite: :strong,
+    # keyfile: System.fetch_env!("PHOENIX360_SSL_KEY_PATH"),
+    # certfile: System.fetch_env!("PHOENIX360_SSL_CERT_PATH"),
+    transport_options: [socket_opts: [:inet6]]
+  ]
+
 # The `cipher_suite` is set to `:strong` to support only the
 # latest and more secure SSL ciphers. This means old browsers
 # and clients may not be supported. You can set it to
@@ -237,14 +259,6 @@ config :phoenix360, Phoenix360Web.Endpoint,
 # and cert in disk or a relative path inside priv, for example
 # "priv/ssl/server.key". For all supported SSL configuration
 # options, see https://hexdocs.pm/plug/Plug.SSL.html#configure/1
-#
-# We also recommend setting `force_ssl` in your endpoint, ensuring
-# no data is ever sent via http, always redirecting to https:
-#
-#     config :phoenix360, Phoenix360Web.Endpoint,
-#       force_ssl: [hsts: true]
-#
-# Check `Plug.SSL` for all available options in `force_ssl`.
 
 if config_env() == :prod do
   log_level =
