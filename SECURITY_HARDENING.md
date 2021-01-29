@@ -133,7 +133,7 @@ echo ".env" >> .gitignore
 ```elixir
 defmodule Phoenix360Web.Security do
   def redirect_to_https() do
-    [host: host, port: port] = url = Application.fetch_env!(:phoenix360, Phoenix360Web.Endpoint)[:url]
+    [host: host, port: port] = Application.fetch_env!(:phoenix360, Phoenix360Web.Endpoint)[:url]
     "#{host}:#{port}"
   end
 
