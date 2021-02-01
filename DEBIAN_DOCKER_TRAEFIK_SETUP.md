@@ -8,6 +8,8 @@
 
 set -eux
 
+# @link https://gitlab.com/-/snippets/17115
+
 ### ---> INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
 
 apt update
@@ -30,9 +32,7 @@ chmod 660 /opt/traefik/.env
 
 ./traefik-setup
 
-# cd -
-
-# rm -rf debian-traefik-setup
+rm -rf /debian-traefik-setup
 
 ### <--- INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
 
@@ -58,14 +58,16 @@ chown root:traefik /usr/local/bin/docker-compose
 # Creates an unprivileged user with sudo privileges. Use only to perform
 # administrative task in the server.
 # DON'T RUN PRODUCTION WORKLOADS WITH THIS USER
+# @link https://sleeplessbeastie.eu/2015/09/28/how-to-programmatically-create-system-user-with-defined-password/
 # USER_PASSWORD_HASH='---> GENERATE ONE IN YOUR PC WITH: openssl passwd -6 your-password-string-here <---'
 USER_PASSWORD_HASH='$6$v9aEbpNzVVBZAfh2$OcF.mValN9pHVObcJXrLLXcGm59hCPk0gKYOFH/g7vZCSVV4sq1SCUe9a1bN4dMkNr5Eyeu20cjqSVEe8.9Ht1'
-useradd traefik_tasks --create-home --uid 1001 --shell /bin/bash --password "${USER_PASSWORD_HASH}"
-usermod -aG sudo traefik_tasks
+useradd traefik_admin --create-home --uid 1001 --shell /bin/bash --password "${USER_PASSWORD_HASH}"
+usermod -aG sudo traefik_admin
 
-# mv /root/.ssh /home/traefik
-cp -R /root/.ssh /home/traefik_tasks
-chown -R traefik_tasks:traefik_tasks /home/traefik_tasks/.ssh
+cp -R /root/.ssh /home/traefik_admin
+chown -R traefik_admin:traefik_admin /home/traefik_admin/.ssh
+
+# rm -rf /root/.ssh
 
 # Protocol 1 is insecure and must not be used.
 echo "Protocol 2 # $(date -R)" >> /etc/ssh/sshd_config
@@ -94,7 +96,7 @@ sed -i -E "/^#?PubkeyAuthentication/s/^.*$/PubkeyAuthentication yes # $(date -R)
 # <---
 
 # ---> Limit Users ssh access
-echo "AllowUsers traefik traefik_tasks # $(date -R)" >> /etc/ssh/sshd_config
+echo "AllowUsers traefik traefik_admin # $(date -R)" >> /etc/ssh/sshd_config
 # <---
 
 # ---> Disable Empty Passwords
