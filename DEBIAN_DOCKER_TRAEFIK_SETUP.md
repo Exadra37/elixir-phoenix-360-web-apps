@@ -1,28 +1,22 @@
 # DEBIAN DOCKER TRAEFIK SETUP
 
 
-## Cloud-Init
+## Bash Setup Script
 
-```bash
+```sh
 #!/bin/sh
 
 set -eux
 
+### ---> INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
+
 apt update
 apt install -y --no-install-recommends git
 
-useradd -m -u 1000 -s /bin/bash developer
-usermod -aG sudo developer
+git clone https://github.com/approov/debian-traefik-setup.git
+cd debian-traefik-setup
 
-# user will need to create the password the first time it tries to use sudo
-passwd --expire developer
-
-mv /root/.ssh /home/developer
-chown -R developer:developer /home/developer/.ssh/
-
-git clone https://github.com/approov/debian-traefik-setup.git && cd debian-traefik-setup
-
-sudo cp -r ./traefik /opt
+cp -r ./traefik /opt
 
 (
   cat <<'EOF'
@@ -31,10 +25,47 @@ TRAEFIK_ACME_EMAIL=ksierra37@gmail.com
 EOF
 ) > .env
 
-sudo mv .env /opt/traefik
-sudo chmod 660 /opt/traefik/.env
+mv .env /opt/traefik
+chmod 660 /opt/traefik/.env
 
 ./traefik-setup
+
+# cd -
+
+# rm -rf debian-traefik-setup
+
+### <--- INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
+
+# Creates an unprivileged user, without sudo access, but belonging to the docker
+# group to allow for programmatic launch of docker containers.
+# USE THIS USER FOR RUNNING THE PRODUCTION WORKLOADS.
+useradd traefik --create-home --uid 1000 --shell /bin/sh
+usermod -aG docker traefik
+
+# @link https://unix.stackexchange.com/a/193131/311426
+# On Linux, you can disable password-based access to an account while allowing
+# SSH access (with some other authentication method, typically a key pair).
+# Using `*` as a placeholder for the password hash is just a convention to
+# make the sytem think the user as a password, but it's an invalid one,
+# because it's not a valid crypto hash, therefore the user will never be
+# able to use the `*` as a valid password when prompted to input one.
+usermod -p '*' traefik
+
+cp -R /root/.ssh /home/traefik
+chown -R traefik:traefik /home/traefik/.ssh
+chown root:traefik /usr/local/bin/docker-compose
+
+# Creates an unprivileged user with sudo privileges. Use only to perform
+# administrative task in the server.
+# DON'T RUN PRODUCTION WORKLOADS WITH THIS USER
+# USER_PASSWORD_HASH='---> GENERATE ONE IN YOUR PC WITH: openssl passwd -6 your-password-string-here <---'
+USER_PASSWORD_HASH='$6$v9aEbpNzVVBZAfh2$OcF.mValN9pHVObcJXrLLXcGm59hCPk0gKYOFH/g7vZCSVV4sq1SCUe9a1bN4dMkNr5Eyeu20cjqSVEe8.9Ht1'
+useradd traefik_tasks --create-home --uid 1001 --shell /bin/bash --password "${USER_PASSWORD_HASH}"
+usermod -aG sudo traefik_tasks
+
+# mv /root/.ssh /home/traefik
+cp -R /root/.ssh /home/traefik_tasks
+chown -R traefik_tasks:traefik_tasks /home/traefik_tasks/.ssh
 
 # Protocol 1 is insecure and must not be used.
 echo "Protocol 2 # $(date -R)" >> /etc/ssh/sshd_config
@@ -63,7 +94,7 @@ sed -i -E "/^#?PubkeyAuthentication/s/^.*$/PubkeyAuthentication yes # $(date -R)
 # <---
 
 # ---> Limit Users ssh access
-echo "AllowUsers developer # $(date -R)" >> /etc/ssh/sshd_config
+echo "AllowUsers traefik traefik_tasks # $(date -R)" >> /etc/ssh/sshd_config
 # <---
 
 # ---> Disable Empty Passwords
@@ -139,5 +170,4 @@ sshd -t
 systemctl restart ssh.service
 
 systemctl status ssh.service
-
 ```
