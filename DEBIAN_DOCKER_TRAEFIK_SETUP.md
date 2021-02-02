@@ -8,7 +8,28 @@
 
 set -eux
 
-# @link https://gitlab.com/-/snippets/17115
+# TODO:
+# * Set sudo to timeout in 1 minute
+# * Set alert on .profile or .bashrc to send an email each time a login occurs
+# * Secure Docker with TLS
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#automatic-security-updates-and-alerts
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#firewall-with-ufw-uncomplicated-firewall
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#iptables-intrusion-detection-and-prevention-with-psad
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#application-intrusion-detection-and-prevention-with-fail2ban
+
+# @link https://www.cyberciti.biz/tips/allow-a-normal-user-to-run-commands-as-root.html
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#logwatch---system-log-analyzer-and-reporter
+
+# AUDIT:
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#lynis---linux-security-auditing
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#ss---seeing-ports-your-server-is-listening-on
+# * Check open ports: sudo ss -lntup
+
 
 ### ---> INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
 
@@ -77,6 +98,20 @@ sed -i -E "/^#?X11Forwarding/s/^.*$/X11Forwarding no # $(date -R)/" /etc/ssh/ssh
 
 # Can be used by hackers and malware to open backdoors in the server.
 sed -i -E "/^#?AllowTcpForwarding/s/^.*$/AllowTcpForwarding no # $(date -R)/" /etc/ssh/sshd_config
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server
+# ---> Enhanced from the github repo
+# sed -i -E "/^#?AllowStreamLocalForwarding/s/^.*$/AllowStreamLocalForwarding no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?GatewayPorts/s/^.*$/GatewayPorts no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?PermitTunnel/s/^.*$/PermitTunnel no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?Compression/s/^.*$/Compression no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?TCPKeepAlive/s/^.*$/TCPKeepAlive no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?AllowAgentForwarding/s/^.*$/AllowAgentForwarding no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxAuthTries/s/^.*$/MaxAuthTries 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxSessions/s/^.*$/MaxSessions 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxStartups/s/^.*$/MaxStartups 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?LoginGraceTime/s/^.*$/LoginGraceTime 2 # $(date -R)/" /etc/ssh/sshd_config
+# <---
 
 # @link http://www.cyberciti.biz/tips/linux-unix-bsd-openssh-server-best-practices.html
 
