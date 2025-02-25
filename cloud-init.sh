@@ -1,0 +1,259 @@
+#!/bin/sh
+
+set -eux
+
+SSH_PORT=26928
+
+# TODO:
+# * Set sudo to timeout in 1 minute
+# * Set alert on .profile or .bashrc to send an email each time a login occurs???
+# * Secure Docker with TLS
+# * Uninstall or secure Perl
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#automatic-security-updates-and-alerts
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#firewall-with-ufw-uncomplicated-firewall
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#iptables-intrusion-detection-and-prevention-with-psad
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#application-intrusion-detection-and-prevention-with-fail2ban
+
+# @link https://www.cyberciti.biz/tips/allow-a-normal-user-to-run-commands-as-root.html
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#logwatch---system-log-analyzer-and-reporter
+
+# AUDIT:
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#lynis---linux-security-auditing
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#ss---seeing-ports-your-server-is-listening-on
+# * Check open ports: sudo ss -lntup
+
+### ---> FIREWALL
+apt install ufw
+
+ufw default deny outgoing comment 'deny all outgoing traffic'
+ufw default deny incoming comment 'deny all incoming traffic'
+
+
+# ufw limit in ssh comment 'allow SSH connections in'
+ufw allow in ${SSH_PORT} comment 'allow incoming SSH connections'
+
+ufw allow out 53 comment 'allow DNS calls out'
+
+ufw allow out 123 comment 'allow NTP calls out'
+
+ufw allow in http comment 'allow HTTP traffic in'
+ufw allow in https comment 'allow HTTPS traffic in'
+ufw allow out http comment 'allow HTTP traffic out'
+ufw allow out https comment 'allow HTTPS traffic out'
+
+ufw enable
+
+# allow whois if installed
+# ufw allow out whois comment 'allow whois'
+
+# allow traffic out on port 68 -- the DHCP client
+# you only need this if a DHCP server is installed and being used
+# ufw allow out 68 comment 'allow the DHCP client to update'
+### <--- FIREWALL
+
+### ---> Iptables Intrusion Detection and Prevention wihr PSAD
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#iptables-intrusion-detection-and-prevention-with-psad
+# NOT SURE: it install a lot of dependencies and the one that puts me off is the
+# mail server exim.
+### <--- Iptables Intrusion Detection and Prevention wihr PSAD
+
+### ---> Application Intrusion Detection And Prevention With Fail2Ban
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server#application-intrusion-detection-and-prevention-with-fail2ban
+# NOT SURE: Needs investigation if makes sense for a server running only docker containers
+### <--- Application Intrusion Detection And Prevention With Fail2Ban
+
+### ---> INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
+apt update
+apt install -y --no-install-recommends git haveged
+
+# @link https://www.digitalocean.com/community/tutorials/how-to-setup-additional-entropy-for-cloud-servers-using-haveged
+update-rc.d haveged defaults
+
+git clone https://github.com/approov/debian-traefik-setup.git
+cd debian-traefik-setup
+
+cp -r ./traefik /opt
+
+(
+  cat <<'EOF'
+TRAEFIK_DOCKER_DOMAIN=dev.videopundits.com
+TRAEFIK_ACME_EMAIL=exadra37+letsencrypt@gmail.com
+EOF
+) > .env
+
+mv .env /opt/traefik
+chmod 660 /opt/traefik/.env
+
+./traefik-setup
+
+rm -rf /debian-traefik-setup
+### <--- INTALL DOCKER, DOCKER-COMPOSE, TRAEFIK ###
+
+if grep -q :1000: /etc/passwd; then
+  echo "---> Debian user exists and is being deleted."
+  userdel -Z -r -f $(id -nu 1000)
+else
+  echo "Debian user doesn't exist."
+fi
+
+# Creates an unprivileged user, without sudo access, but belonging to the docker
+# group to allow for programmatic launch of docker containers.
+# USE THIS USER FOR RUNNING THE PRODUCTION WORKLOADS.
+useradd traefik --create-home --uid 1000 --shell /bin/sh
+usermod -aG docker traefik
+
+# @link https://unix.stackexchange.com/a/193131/311426
+# On Linux, you can disable password-based access to an account while allowing
+# SSH access (with some other authentication method, typically a key pair).
+# Using `*` as a placeholder for the password hash is just a convention to
+# make the sytem think the user as a password, but it's an invalid one,
+# because it's not a valid crypto hash, therefore the user will never be
+# able to use the `*` as a valid password when prompted to input one.
+usermod -p '*' traefik
+
+cp -R /root/.ssh /home/traefik
+chown -R traefik:traefik /home/traefik/.ssh
+chown root:traefik /usr/local/bin/docker-compose
+
+# Creates an unprivileged user with sudo privileges. Use only to perform
+# administrative task in the server.
+# DON'T RUN PRODUCTION WORKLOADS WITH THIS USER
+# @link https://sleeplessbeastie.eu/2015/09/28/how-to-programmatically-create-system-user-with-defined-password/
+# USER_PASSWORD_HASH='---> GENERATE ONE IN YOUR PC WITH: openssl passwd -6 your-password-string-here <---'
+USER_PASSWORD_HASH='$6$YgH9O/5FOnRK8z3T$XWiRDfDD7R0d7/CXboc9Rh9LXXQr7PmTYDA3bP47trzkAlYd5q9ksVU64RbnUqbMboHg7PQcJPeEJJ5g20iMg.'
+useradd traefik_admin --create-home --uid 1001 --shell /bin/bash --password "${USER_PASSWORD_HASH}"
+usermod -aG sudo traefik_admin
+
+cp -R /root/.ssh /home/traefik_admin
+chown -R traefik_admin:traefik_admin /home/traefik_admin/.ssh
+
+# rm -rf /root/.ssh
+
+# Protocol 1 is insecure and must not be used.
+echo "Protocol 2 # $(date -R)" >> /etc/ssh/sshd_config
+
+# Unless we really need it its best to have it disabled.
+sed -i -E "/^#?X11Forwarding/s/^.*$/X11Forwarding no # $(date -R)/" /etc/ssh/sshd_config
+
+# Can be used by hackers and malware to open backdoors in the server.
+sed -i -E "/^#?AllowTcpForwarding/s/^.*$/AllowTcpForwarding no # $(date -R)/" /etc/ssh/sshd_config
+
+# @link https://github.com/imthenachoman/How-To-Secure-A-Linux-Server
+# ---> Enhanced from the github repo
+# sed -i -E "/^#?AllowStreamLocalForwarding/s/^.*$/AllowStreamLocalForwarding no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?GatewayPorts/s/^.*$/GatewayPorts no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?PermitTunnel/s/^.*$/PermitTunnel no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?Compression/s/^.*$/Compression no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?TCPKeepAlive/s/^.*$/TCPKeepAlive no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?AllowAgentForwarding/s/^.*$/AllowAgentForwarding no # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxAuthTries/s/^.*$/MaxAuthTries 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxSessions/s/^.*$/MaxSessions 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?MaxStartups/s/^.*$/MaxStartups 2 # $(date -R)/" /etc/ssh/sshd_config
+# sed -i -E "/^#?LoginGraceTime/s/^.*$/LoginGraceTime 2 # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# @link http://www.cyberciti.biz/tips/linux-unix-bsd-openssh-server-best-practices.html
+
+# ---> Disable root user login:
+sed -i -E "/^#?PermitRootLogin/s/^.*$/PermitRootLogin no # $(date -R)/" /etc/ssh/sshd_config
+
+sed -i -E "/^#?ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no # $(date -R)/" /etc/ssh/sshd_config
+
+sed -i -E "/^#?PasswordAuthentication/s/^.*$/PasswordAuthentication no # $(date -R)/" /etc/ssh/sshd_config
+
+sed -i -E "/^#?UsePAM/s/^.*$/UsePAM no # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Disable password based login
+echo "AuthenticationMethods publickey # $(date -R)" >> /etc/ssh/sshd_config
+sed -i -E "/^#?PubkeyAuthentication/s/^.*$/PubkeyAuthentication yes # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Limit Users ssh access
+echo "AllowUsers traefik traefik_admin # $(date -R)" >> /etc/ssh/sshd_config
+# <---
+
+# ---> Disable Empty Passwords
+sed -i -E "/^#?PermitEmptyPasswords/s/^.*$/PermitEmptyPasswords no # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Change SSH Port and limit IP binding
+# changing here the default port for SSH, implies also to open it in the firewall
+sed -i -E "/^#?Port/s/^.*$/Port ${SSH_PORT} # $(date -R)/" /etc/ssh/sshd_config
+
+# listen only in IPV6
+#sed -i -E "/^#?AddressFamily/s/^.*$/AddressFamily inet # $(date -R)/" /etc/ssh/sshd_config
+
+# optionally lock it down to your IPv6 address
+#sed -i -E "/^#?ListenAddress/s/^.*$/ListenAddress YOUR.IPV6.HERE # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Thwart SSH crackers/brute force attacks
+# @TODO Install DenyHosts, Fail2Ban or similar
+
+# ---> Rate-limit incoming traffic at TCP port for SSH and HTTP(DDOS attacks prevention)
+# @TODO Configure the firewall with specific rules
+
+# ---> Use port knocking (optional)
+# @TODO Maybe with knockd https://www.cyberciti.biz/faq/debian-ubuntu-linux-iptables-knockd-port-knocking-tutorial/
+
+# ---> Configure idle log out timeout interval
+# set for two minutes
+sed -i -E "/^#?ClientAliveInterval/s/^.*$/ClientAliveInterval 120 # $(date -R)/" /etc/ssh/sshd_config
+
+# only 1 ssh session per user is allowed
+sed -i -E "/^#?ClientAliveCountMax/s/^.*$/ClientAliveCountMax 0 # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Disable .rhosts files (verification)
+sed -i -E "/^#?IgnoreRhosts/s/^.*$/IgnoreRhosts yes # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Disable host-based authentication (verification)
+sed -i -E "/^#?HostbasedAuthentication/s/^.*$/HostbasedAuthentication no # $(date -R)/" /etc/ssh/sshd_config
+# <---
+
+# ---> Chroot OpenSSH (Lock down users to their home directories)
+# @TODO This one depends on the operational needs for each user of the system.
+
+# ---> Bonus tips from Mozilla
+# @link https://infosec.mozilla.org/guidelines/openssh
+# Supported HostKey algorithms by order of preference.
+echo "HostKey /etc/ssh/ssh_host_ed25519_key # $(date -R)" >> /etc/ssh/sshd_config
+
+echo "HostKey /etc/ssh/ssh_host_rsa_key # $(date -R)" >> /etc/ssh/sshd_config
+
+echo "HostKey /etc/ssh/ssh_host_ecdsa_key # $(date -R)" >> /etc/ssh/sshd_config
+
+echo "KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256 # $(date -R)" >> /etc/ssh/sshd_config
+
+echo "Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr # $(date -R)" >> /etc/ssh/sshd_config
+
+echo "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com # $(date -R)" >> /etc/ssh/sshd_config
+# <---
+
+# All Diffie-Hellman moduli in use should be at least 3072-bit-long (they are used for diffie-hellman-group-exchange-sha256) as per our Key management Guidelines recommendations. See also man moduli. To deactivate short moduli in two commands:
+awk '$5 >= 3071' /etc/ssh/moduli > /etc/ssh/moduli.tmp && mv /etc/ssh/moduli.tmp /etc/ssh/moduli
+
+# LogLevel VERBOSE logs user's key fingerprint on login. Needed to have a clear audit track of which key was using to log in.
+echo "LogLevel VERBOSE # $(date -R)" >> /etc/ssh/sshd_config
+
+# Log sftp level file access (read/write/etc.) that would not be easily logged otherwise.
+sed -i -E "/^#?Subsystem sftp/s/^.*$/Subsystem sftp \/usr\/lib\/openssh\/sftp-server -f AUTHPRIV -l INFO # $(date -R)/" /etc/ssh/sshd_config
+
+sshd -t
+
+systemctl restart ssh.service
+
+systemctl status ssh.service
+
+### ---> Perl Hardening
+# Doing it as the last step, just in case something before adds some more Perl
+# packages
+find /usr/bin -type f -name perl* | xargs chmod 700
+### <--- Perl Hardening
